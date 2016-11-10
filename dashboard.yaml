@@ -1,0 +1,14 @@
+template: Hello, %s!
+defaultName: Stranger
+
+#server:
+#  rootPath: /api/
+
+server:
+  type: simple
+  applicationContextPath: /
+  adminContextPath: /admin
+  #rootPath: /api/
+  connector:
+    type: http
+    port: 9080
