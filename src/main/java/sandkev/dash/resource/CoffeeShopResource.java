@@ -1,8 +1,10 @@
-package sandkev.dash;
+package sandkev.dash.resource;
 
 import com.mongodb.MongoClient;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.Morphia;
+import sandkev.dash.pojo.CoffeeShop;
+import sandkev.dash.pojo.Order;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;

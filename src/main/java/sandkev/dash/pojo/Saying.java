@@ -1,4 +1,4 @@
-package sandkev.dash;
+package sandkev.dash.pojo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.validator.constraints.Length;

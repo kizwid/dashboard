@@ -1,4 +1,4 @@
-package sandkev.dash;
+package sandkev.dash.pojo;
 
 import org.mongodb.morphia.geo.Point;
 

@@ -12,6 +12,9 @@ import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import sandkev.dash.resource.CoffeeShopResource;
+import sandkev.dash.resource.HelloResource;
+import sandkev.dash.resource.PhotoTaskResource;
 
 import java.io.IOException;
 
@@ -35,6 +38,7 @@ public class DashboardApp extends Application<DashboardAppConfig> {
         MongoClient mongoClient = startEmmbeddedMongo();
         environment.lifecycle().manage(new MongoClientManager(mongoClient));
         environment.jersey().register(new CoffeeShopResource(mongoClient));
+        environment.jersey().register(new PhotoTaskResource(mongoClient));
 
         final HelloResource resource = new HelloResource(
                 config.getTemplate(),

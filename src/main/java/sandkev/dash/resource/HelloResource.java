@@ -1,6 +1,7 @@
-package sandkev.dash;
+package sandkev.dash.resource;
 
 import com.codahale.metrics.annotation.Timed;
+import sandkev.dash.pojo.Saying;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;

@@ -1,4 +1,4 @@
-package sandkev.dash;
+package sandkev.dash.pojo;
 
 public class DrinkType {
     private String name;
