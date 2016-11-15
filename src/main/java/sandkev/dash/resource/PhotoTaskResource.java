@@ -1,29 +1,30 @@
 package sandkev.dash.resource;
 
-import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.mongodb.MongoClient;
-import javassist.bytecode.analysis.Executor;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.commons.io.input.ReaderInputStream;
+import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.Morphia;
 import sandkev.dash.pojo.PhotoTask;
 
 import javax.ws.rs.*;
-import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
 import java.net.URI;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.*;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -56,38 +57,57 @@ public class PhotoTaskResource {
 
         Collection<File> files = FileUtils.listFiles(
                 rootDir,
-                new WildcardFileFilter("*.JPG"),
+                new WildcardFileFilter("*.JPG", IOCase.INSENSITIVE),
                 TrueFileFilter.INSTANCE
         );
 
         ExecutorService executorService = Executors.newFixedThreadPool(3);
-        CompletionService completionService = new ExecutorCompletionService(executorService);
+        CompletionService<String> completionService = new ExecutorCompletionService(executorService);
 
         long start = System.currentTimeMillis();
         for (File file : files) {
-            completionService.submit(new Callable() {
-                @Override
-                public Object call() throws Exception {
-                    String hex = hashFile(file);
-                    System.out.println(hex + " " +  file.getAbsoluteFile());
-                    return hex;
-                }
+            completionService.submit(() -> {
+                String hex = hashFile(file);
+                System.out.println(hex + " " +  file.getAbsoluteFile());
+                return hex;
             });
         }
+        ConcurrentHashMap<String,ConcurrentHashSet<File>> hex2File = new ConcurrentHashMap();
+        ConcurrentHashMap<String,ConcurrentHashSet<File>> dups = new ConcurrentHashMap();
+
+        System.out.println("found " + files.size() + " files " + (System.currentTimeMillis() - start));
         for (File file : files) {
             try {
-                completionService.take();
+                String hex = completionService.take().get();
+                ConcurrentHashSet<File> filesForHex = hex2File.get(hex);
+                if(filesForHex==null){
+                    hex2File.put(hex, filesForHex = new ConcurrentHashSet<File>());
+                    filesForHex.add(file);
+                }else {
+                    System.out.println("found duplicate: " + hex);
+                    dups.putIfAbsent(hex, filesForHex);
+                }
+                filesForHex.add(file);
+
             } catch (InterruptedException e) {
                 Thread.interrupted();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
             }
         }
         System.out.println("found " + files.size() + " files " + (System.currentTimeMillis() - start));
+        for (Map.Entry<String, ConcurrentHashSet<File>> entry : dups.entrySet()) {
+            System.out.println(entry);
+        }
+        //System.out.println(dups);
 
     }
 
     private String hashFile(File file) throws IOException {
         //found 12260 files 129899  *.JPG <-- 1
         //found 12260 files 76215 <-- 3
+        //found 12260 files 63327
+        //found 13340 files 61248
         //found 1085 files 3380 <-- 1
         //found 1085 files 1614 <-- 3
         //found 1085 files 1613 <-- 5
@@ -105,7 +125,7 @@ public class PhotoTaskResource {
             MessageDigest digest = MessageDigest.getInstance("SHA1");
 
             fis = new ReaderInputStream(reader);
-            byte[] data = new byte[1024];
+            byte[] data = new byte[1024 * 4];
             int read;
             while ((read = fis.read(data)) != -1) {
                 digest.update(data, 0, read);

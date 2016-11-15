@@ -43,7 +43,22 @@
         <pre>{{drink | json}}</pre>
         <div class="form-group">
             <input type="submit" class="btn btn-default btn-lg"
-                   value="Give Me Coffee!!"/>
+                   value="Place Order"/>
+        </div>
+    </form>
+</div>
+
+<div ng-controller="PhotoController" class="container">
+    <form ng-submit="processPhotos()">
+        <div class="form-group">
+            <label>Photo Task</label>
+            <select ng-model="photo.task"
+                    ng-options="task for task in tasks"
+                    class="form-control"></select>
+        </div>
+        <div class="form-group">
+            <input type="submit" class="btn btn-default btn-lg"
+                   value="Process Photos"/>
         </div>
     </form>
 </div>

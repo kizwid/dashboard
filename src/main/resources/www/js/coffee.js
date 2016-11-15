@@ -51,3 +51,19 @@ coffeeApp.controller('OrderController', function ($scope, $resource, LocalCoffee
         $scope.messages.splice(index, 1);
     };
 });
+
+coffeeApp.controller('PhotoController', function ($scope, $resource) {
+    $scope.tasks = ['Analyse', 'List', 'Other'];
+
+    $scope.processPhotos = function() {
+        var PhotoTask = $resource('/service/photo/notify/xxxxx');
+        $scope.messages = [];
+        PhotoTask.save($scope.task, function (order) {
+            $scope.messages.push({type: 'success', msg: 'Order sent!'})
+        });
+    };
+
+    $scope.closeAlert = function (index) {
+        $scope.messages.splice(index, 1);
+    };
+});
