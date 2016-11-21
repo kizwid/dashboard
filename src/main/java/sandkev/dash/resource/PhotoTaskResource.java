@@ -3,6 +3,7 @@ package sandkev.dash.resource;
 import com.google.common.hash.Hashing;
 import com.mongodb.MongoClient;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -23,8 +24,7 @@ import java.io.Reader;
 import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -36,7 +36,7 @@ public class PhotoTaskResource {
     private Datastore datastore;
 
     public PhotoTaskResource(MongoClient mongoClient) {
-        datastore = new Morphia().createDatastore(mongoClient, "Cafelito");
+        //datastore = new Morphia().createDatastore(mongoClient, "Cafelito");
     }
 
     @Path("notify/{task}")
@@ -72,22 +72,13 @@ public class PhotoTaskResource {
                 return hex;
             });
         }
-        ConcurrentHashMap<String,ConcurrentHashSet<File>> hex2File = new ConcurrentHashMap();
-        ConcurrentHashMap<String,ConcurrentHashSet<File>> dups = new ConcurrentHashMap();
 
         System.out.println("found " + files.size() + " files " + (System.currentTimeMillis() - start));
+        Map<File,String> file2Hex = new HashMap<>();
         for (File file : files) {
             try {
                 String hex = completionService.take().get();
-                ConcurrentHashSet<File> filesForHex = hex2File.get(hex);
-                if(filesForHex==null){
-                    hex2File.put(hex, filesForHex = new ConcurrentHashSet<File>());
-                    filesForHex.add(file);
-                }else {
-                    System.out.println("found duplicate: " + hex);
-                    dups.putIfAbsent(hex, filesForHex);
-                }
-                filesForHex.add(file);
+                file2Hex.put(file, hex);
 
             } catch (InterruptedException e) {
                 Thread.interrupted();
@@ -95,11 +86,32 @@ public class PhotoTaskResource {
                 e.printStackTrace();
             }
         }
+
+        Map<String, Set<File>> filesByHex = new HashMap<>();
+        for (Map.Entry<File, String> ent : file2Hex.entrySet()) {
+            File file = ent.getKey();
+            String key = ent.getValue();
+            Set<File> filesForHex = filesByHex.get(key);
+            if (filesForHex == null) {
+                filesByHex.put(key, filesForHex = new HashSet<>());
+            }
+            filesForHex.add(file);
+        }
+        Map<String, Set<File>> dups = new HashMap();
+        for (Map.Entry<String, Set<File>> entry : filesByHex.entrySet()) {
+            String key = entry.getKey();
+            Set<File> fileSet = entry.getValue();
+            if (fileSet.size() > 1) {
+                dups.put(key, fileSet);
+            }
+        }
+
+
         System.out.println("found " + files.size() + " files " + (System.currentTimeMillis() - start));
-        for (Map.Entry<String, ConcurrentHashSet<File>> entry : dups.entrySet()) {
+        for (Map.Entry<String, Set<File>> entry : dups.entrySet()) {
             System.out.println(entry);
         }
-        //System.out.println(dups);
+        System.out.println(dups.size()+" duplicates found");
 
     }
 
@@ -112,10 +124,14 @@ public class PhotoTaskResource {
         //found 1085 files 1614 <-- 3
         //found 1085 files 1613 <-- 5
         //found 1085 files 1393 <-- 10
+
         return Hashing.murmur3_128().hashBytes(FileUtils.readFileToByteArray(file)).toString();
 
         //found 1085 files 67508 <-- 3
         //return checksum(new FileReader(file));
+
+        //return DigestUtils.sha1Hex(FileUtils.readFileToByteArray(file));
+
     }
 
 
