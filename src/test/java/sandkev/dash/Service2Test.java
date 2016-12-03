@@ -24,47 +24,69 @@ public class Service2Test {
     }
 
     public interface Service<T>{
-        CompletableFuture<Void> perform(TaskMarker task) throws Exception;
+        CompletableFuture<Map<File,String>> perform(TaskMarker task) throws Exception;
         void cancel(TaskMarker task); //who has responsibility to cancel the task(service or task)
     }
 
+    public interface FileListener{
+        void onFile(File file);
+    }
 
     @Test
     public void canMonitorTaskToCompletion() throws Exception {
         long start = System.currentTimeMillis();
 
         //Callable<Integer> foo;
-        final ExecutorService executorService = Executors.newFixedThreadPool(3);
-        final CompletionService<String> completionService = new ExecutorCompletionService(executorService);
+        final ExecutorService executorService = Executors.newFixedThreadPool(7);
+        final CompletionService<AbstractMap.SimpleEntry> completionService = new ExecutorCompletionService(executorService);
 
-        Service<String> service = new Service<String>() {
+        Service<Map<File,String>> service = new Service<Map<File,String>>() {
             @Override
-            public CompletableFuture<Void> perform(TaskMarker task) throws Exception{
-                Supplier<Collection<File>> listSupplier = () -> {
-                    File rootDir = new File("/Users/kevin/Google Drive/photos");
+            public CompletableFuture<Map<File,String>> perform(TaskMarker task) throws Exception{
+                File rootDir = new File("/Users/kevin/Google Drive/photos");
 
-                    Collection<File> files = FileUtils.listFiles(
-                            rootDir,
-                            new WildcardFileFilter("*.JPG", IOCase.INSENSITIVE),
-                            TrueFileFilter.INSTANCE
-                    );
-                    return files;
+                Supplier<Map<File,String>> supplier = new Supplier<Map<File, String>>() {
+                    @Override
+                    public Map<File, String> get() {
+
+                        Map<File,String> hashByFile = new HashMap<>();
+                        WildcardFileFilter fileFilter = new WildcardFileFilter("*.JPG", IOCase.INSENSITIVE);
+                        Collection<File> files = FileUtils.listFiles(
+                                rootDir,
+                                fileFilter,
+                                TrueFileFilter.INSTANCE
+                        );
+
+
+                        for (File file : files) {
+                            completionService.submit(
+                                    new Callable<AbstractMap.SimpleEntry>() {
+                                        @Override
+                                        public AbstractMap.SimpleEntry call() throws Exception {
+                                            AbstractMap.SimpleEntry entry = new AbstractMap.SimpleEntry(file, hashFile(file));
+                                            System.out.println(entry);
+                                            return entry;
+                                            //return hashFile(file);
+                                        }
+                                    }
+                            );
+                        }
+                        for (File file : files) {
+                            try {
+                                AbstractMap.SimpleEntry<File, String> entry = completionService.take().get();
+                                hashByFile.put(entry.getKey(), entry.getValue());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+
+
+                        return hashByFile;
+                    }
                 };
 
-                CompletableFuture<Collection<File>> listReceiver
-                        = CompletableFuture.supplyAsync(listSupplier);
-
-                return listReceiver.thenAccept(files -> {
-                    for (File file1 : files) {
-                        try {
-                            String hash = hashFile(file1);
-                            System.out.println(hash + " -> " + file1);
-                            //return hash;
-                        } catch (IOException e) {
-                            throw new IllegalStateException(e);
-                        }
-                    }
-                });
+                return CompletableFuture.supplyAsync(supplier);
 
             }
 
@@ -74,10 +96,12 @@ public class Service2Test {
             }
         };
 
-        CompletableFuture<Void> completableFuture = service.perform(null);
+        CompletableFuture<Map<File,String>> completableFuture = service.perform(null);
         completableFuture.join();
 
         System.out.println("time taken " + (System.currentTimeMillis() - start));
+
+        //3=76218, 5=67
     }
 
 

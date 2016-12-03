@@ -16,6 +16,7 @@ public class PhotoTaskResourceTest {
         PhotoTaskResource photoTaskResource = new PhotoTaskResource(null);
         photoTaskResource.runTask("");
     }
+    //found 12659 files 78454
 
     /*
     duplicates found using Hashing.murmur3_128
