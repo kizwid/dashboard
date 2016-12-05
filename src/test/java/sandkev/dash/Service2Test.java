@@ -37,7 +37,7 @@ public class Service2Test {
         long start = System.currentTimeMillis();
 
         //Callable<Integer> foo;
-        final ExecutorService executorService = Executors.newFixedThreadPool(7);
+        final ExecutorService executorService = Executors.newFixedThreadPool(10);
         final CompletionService<AbstractMap.SimpleEntry> completionService = new ExecutorCompletionService(executorService);
 
         Service<Map<File,String>> service = new Service<Map<File,String>>() {
@@ -64,15 +64,22 @@ public class Service2Test {
                                         @Override
                                         public AbstractMap.SimpleEntry call() throws Exception {
                                             AbstractMap.SimpleEntry entry = new AbstractMap.SimpleEntry(file, hashFile(file));
-                                            System.out.println(entry);
+                                            //System.out.println(entry);
                                             return entry;
                                             //return hashFile(file);
                                         }
                                     }
                             );
                         }
+                        double n = 0;
+                        double max = files.size();
                         for (File file : files) {
                             try {
+                                n++;
+                                double percentage = (n / max) * 100;
+                                //if(((int)percentage)%10==0){
+                                    System.out.print("\rdone " + (int)n + " of " + (int)max + " (" + (int)percentage +")");
+                                //}
                                 AbstractMap.SimpleEntry<File, String> entry = completionService.take().get();
                                 hashByFile.put(entry.getKey(), entry.getValue());
                             } catch (Exception e) {
