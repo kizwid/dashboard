@@ -38,7 +38,7 @@ public class Service2Test {
 
         //Callable<Integer> foo;
         final ExecutorService executorService = Executors.newFixedThreadPool(10);
-        final CompletionService<AbstractMap.SimpleEntry> completionService = new ExecutorCompletionService(executorService);
+        final CompletionService<Map.Entry> completionService = new ExecutorCompletionService(executorService);
 
         Service<Map<File,String>> service = new Service<Map<File,String>>() {
             @Override
@@ -60,10 +60,10 @@ public class Service2Test {
 
                         for (File file : files) {
                             completionService.submit(
-                                    new Callable<AbstractMap.SimpleEntry>() {
+                                    new Callable<Map.Entry>() {
                                         @Override
-                                        public AbstractMap.SimpleEntry call() throws Exception {
-                                            AbstractMap.SimpleEntry entry = new AbstractMap.SimpleEntry(file, hashFile(file));
+                                        public Map.Entry call() throws Exception {
+                                            Map.Entry entry = new AbstractMap.SimpleEntry(file, hashFile(file));
                                             //System.out.println(entry);
                                             return entry;
                                             //return hashFile(file);
@@ -78,9 +78,9 @@ public class Service2Test {
                                 n++;
                                 double percentage = (n / max) * 100;
                                 //if(((int)percentage)%10==0){
-                                    System.out.print("\rdone " + (int)n + " of " + (int)max + " (" + (int)percentage +")");
+                                    System.out.print("\rdone " + (int) n + " of " + (int) max + " (" + (int) percentage + ")");
                                 //}
-                                AbstractMap.SimpleEntry<File, String> entry = completionService.take().get();
+                                Map.Entry<File, String> entry = completionService.take().get();
                                 hashByFile.put(entry.getKey(), entry.getValue());
                             } catch (Exception e) {
                                 e.printStackTrace();
